@@ -2,6 +2,8 @@ require "http/client"
 require "xml"
 
 module RSS
+  extend self
+
   class Item
     property title, link, pubDate, comments, description
 
