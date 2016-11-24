@@ -9,7 +9,7 @@ Add this to your application's `shard.yml`:
 
 ```yaml
 dependencies:
-  gsl:
+  rss:
     github: ruivieira/rss
 ```
 
