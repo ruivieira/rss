@@ -5,7 +5,7 @@ module RSS
   extend self
 
   class Item
-    property title, link, pubDate, comments, description, guid
+    property title, link, pubDate, comments, description, guid, author
 
     def initialize
       @title = ""
@@ -14,6 +14,7 @@ module RSS
       @comments = ""
       @description = ""
       @guid = ""
+      @author = ""
     end
   end
 
@@ -74,6 +75,11 @@ module RSS
       field = c.xpath_node("guid")
       if field
         item.guid = field.as(XML::Node).text.as(String)
+      end
+
+      field = c.xpath_node("author")
+      if field
+        item.author = field.as(XML::Node).text.as(String)
       end
 
       item
