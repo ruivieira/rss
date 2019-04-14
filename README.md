@@ -4,7 +4,6 @@ Minimal RSS parser for Crystal
 
 ## Installation
 
-
 Add this to your application's `shard.yml`:
 
 ```yaml
@@ -13,19 +12,17 @@ dependencies:
     github: ruivieira/rss
 ```
 
-
 ## Usage
-
 
 ```crystal
 require "rss"
 
 feed = RSS.parse "https://news.ycombinator.com/rss"
 
-feed.items.each { |e| 
-	str = "title: #{e.title}\nlink: #{e.link}\npubDate: #{e.pubDate}\n"
-	str += "description: #{e.description}\ncomments: #{e.comments}\n"
-	puts str 
+feed.items.each { |e|
+  str = "title: #{e.title}\nlink: #{e.link}\npubDate: #{e.pubDate}\n"
+  str += "description: #{e.description}\ncomments: #{e.comments}\n"
+  puts str
 }
 ```
 
@@ -34,8 +31,6 @@ Warning:
 - Not fully test
 - Pre-release (API will break)
 - Not fit for production
-
-
 
 ## Contributing
 
@@ -48,3 +43,4 @@ Warning:
 ## Contributors
 
 - [ruivieira](https://github.com/ruivieira) Rui Vieira - creator, maintainer
+- [modsognir](https://github.com/modsognir) modsognir - contributor
