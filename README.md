@@ -44,3 +44,4 @@ Warning:
 
 - [ruivieira](https://github.com/ruivieira) Rui Vieira - creator, maintainer
 - [modsognir](https://github.com/modsognir) modsognir - contributor
+- [data-niklas](https://github.com/data-niklas) data-niklas - contributor

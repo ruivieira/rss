@@ -1,11 +1,23 @@
 require "http/client"
 require "xml"
+require "json"
 
 module RSS
   extend self
 
   class Item
     property title, link, pubDate, comments, description, guid, author, category
+ 
+    JSON.mapping({
+        "title"=>String,
+        "link"=>String,
+        "pubDate"=>String,
+        "comments"=>String,
+        "description"=>String,
+        "guid"=>String,
+        "author"=>String,
+        "category"=>String
+    });
 
     def initialize
       @title = ""
