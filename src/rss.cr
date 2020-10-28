@@ -6,103 +6,62 @@ module RSS
   extend self
 
   class Item
-    property title, link, pubDate, comments, description, guid, author, category
- 
-    JSON.mapping({
-        "title"=>String,
-        "link"=>String,
-        "pubDate"=>String,
-        "comments"=>String,
-        "description"=>String,
-        "guid"=>String,
-        "author"=>String,
-        "category"=>String
-    });
+    include JSON::Serializable
 
-    def initialize
-      @title = ""
-      @link = ""
-      @pubDate = ""
-      @comments = ""
-      @description = ""
-      @guid = ""
-      @author = ""
-      @category = ""
+    property title : String
+    property link : String
+    property pubDate : String # TODO: Converter??
+    property comments : String
+    property description : String
+    property guid : String
+    property author : String
+    property category : String
+
+    def initialize(@title = "", @link = "", @pubDate = "", @comments = "", @description = "", @guid = "", @author = "", @category = "")
     end
   end
 
   class Feed
-    property version, items
+    include JSON::Serializable
 
-    def initialize
-      @version = "2.0"
-      @items = Array(Item).new
+    property version : String
+    property items : Array(Item)
+    property title : String
+    property link : String
+
+    def initialize(@version = "2.0", @title = "", @link = "", @items = Array(Item).new)
     end
 
     def to_s
-      s = "version: #{@version}"
-      return s
+      "version: #{@version}"
     end
   end
 
   def parse(url : String) : Feed
     response = HTTP::Client.get url
-    body = response.body
-    feed = XML.parse(body)
+    raise Exception.new("Non-200 response") if response.status != HTTP::Status::OK # TODO: Better request failed exception
+    feed = XML.parse response.body
 
     result = Feed.new
 
     version = feed.first_element_child
-    if version
-      result.version = version.as(XML::Node)["version"].as(String)
+    result.version = version["version"].to_s if version
+
+    feed.xpath_node("/rss/channel/title").try { |n| result.title = n.content }
+    feed.xpath_node("/rss/channel/link").try { |n| result.link = n.content }
+    result.items = feed.xpath_nodes("//rss/channel/item").map do |c|
+      Item.new.tap do |item|
+        c.xpath_node("title").try { |n| item.title = n.content }
+        c.xpath_node("link").try { |n| item.link = n.content }
+        c.xpath_node("pubDate").try { |n| item.pubDate = n.content }
+        c.xpath_node("description").try { |n| item.description = n.content }
+        c.xpath_node("comments").try { |n| item.comments = n.content }
+        c.xpath_node("guid").try { |n| item.guid = n.content }
+        c.xpath_node("author").try { |n| item.author = n.content }
+        c.xpath_node("category").try { |n| item.category = n.content }
+      end
     end
 
-    items = feed.xpath("//rss/channel/item").as(XML::NodeSet)
-    result.items = items.map { |c|
-      item = Item.new
-      field = c.xpath_node("title")
-      if field
-        item.title = field.as(XML::Node).text.as(String)
-      end
-
-      field = c.xpath_node("link")
-      if field
-        item.link = field.as(XML::Node).text.as(String)
-      end
-
-      field = c.xpath_node("pubDate")
-      if field
-        item.pubDate = field.as(XML::Node).text.as(String)
-      end
-
-      field = c.xpath_node("description")
-      if field
-        item.description = field.as(XML::Node).text.as(String)
-      end
-
-      field = c.xpath_node("comments")
-      if field
-        item.comments = field.as(XML::Node).text.as(String)
-      end
-
-      field = c.xpath_node("guid")
-      if field
-        item.guid = field.as(XML::Node).text.as(String)
-      end
-
-      field = c.xpath_node("author")
-      if field
-        item.author = field.as(XML::Node).text.as(String)
-      end
-
-      field = c.xpath_node("category")
-      if field
-        item.category = field.as(XML::Node).text.as(String)
-      end
-
-      item
-    }
-
-    return result
+    result
   end
 end

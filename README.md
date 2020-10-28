@@ -19,16 +19,16 @@ require "rss"
 
 feed = RSS.parse "https://news.ycombinator.com/rss"
 
-feed.items.each { |e|
+feed.items.each do |e|
   str = "title: #{e.title}\nlink: #{e.link}\npubDate: #{e.pubDate}\n"
   str += "description: #{e.description}\ncomments: #{e.comments}\n"
   puts str
-}
+end
 ```
 
 Warning:
 
-- Not fully test
+- Not fully tested
 - Pre-release (API will break)
 - Not fit for production
 
@@ -45,3 +45,4 @@ Warning:
 - [ruivieira](https://github.com/ruivieira) Rui Vieira - creator, maintainer
 - [modsognir](https://github.com/modsognir) modsognir - contributor
 - [data-niklas](https://github.com/data-niklas) data-niklas - contributor
+- [MineBartekSA](https://github.com/minebarteksa) MineBartekSA - contributor
