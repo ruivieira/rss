@@ -1,39 +1,37 @@
 require "http/client"
 require "xml"
 require "json"
+require "./models"
 
 module RSS
-  extend self
-
-  class Item
-    include JSON::Serializable
-
-    property title : String
-    property link : String
-    property pubDate : String # TODO: Converter??
-    property comments : String
-    property description : String
-    property guid : String
-    property author : String
-    property category : String
-
-    def initialize(@title = "", @link = "", @pubDate = "", @comments = "", @description = "", @guid = "", @author = "", @category = "")
-    end
-  end
-
   class Feed
     include JSON::Serializable
 
+    # Required Channel Elements
     property version : String
-    property items : Array(Item)
     property title : String
-    property link : String
+    property link : URI
+    property description : String
+    property items : Array(Item)
 
-    def initialize(@version = "2.0", @title = "", @link = "", @items = Array(Item).new)
+    # Optional Channel Elements
+    #
+
+    def initialize(@version = "", @title = "", @link = URI.new, @description = "", @items = Array(Item).new)
     end
 
     def to_s
       "version: #{@version}"
+    end
+
+    # Make sure that the RSS Feed is up to specification
+    def check
+      raise ParserException.new("Invalid Version") if @version.empty?
+      raise ParserException.new("Missing required title field") if @title.empty?
+      raise ParserException.new("Missing required link filed") if @link == URI.new
+      raise ParserException.new("Missing required description filed") if @description.empty?
+      @items.each { |i| raise ParserException.new("Invalid item") if (i.title.nil? || i.title.not_nil!.empty?) && (i.description.nil? || i.description.not_nil!.empty?) }
+      self
     end
   end
 
@@ -44,24 +42,40 @@ module RSS
 
     result = Feed.new
 
-    version = feed.first_element_child
-    result.version = version["version"].to_s if version
-
+    feed.first_element_child.try { |c| c["version"]?.try { |v| result.version = v } }
     feed.xpath_node("/rss/channel/title").try { |n| result.title = n.content }
-    feed.xpath_node("/rss/channel/link").try { |n| result.link = n.content }
+    feed.xpath_node("/rss/channel/link").try do |n|
+      begin
+        result.link = URI.parse n.content
+      rescue
+        raise ParserException.new("Invalid link field")
+      end
+    end
+    feed.xpath_node("/rss/channel/description").try { |n| result.description = n.content }
     result.items = feed.xpath_nodes("//rss/channel/item").map do |c|
       Item.new.tap do |item|
         c.xpath_node("title").try { |n| item.title = n.content }
-        c.xpath_node("link").try { |n| item.link = n.content }
-        c.xpath_node("pubDate").try { |n| item.pubDate = n.content }
+        c.xpath_node("link").try do |n|
+          begin
+            item.link = URI.parse n.content
+          rescue
+          end
+        end
+        c.xpath_node("pubDate").try { |n| item.pubDate = Time::Format::HTTP_DATE.parse n.content }
         c.xpath_node("description").try { |n| item.description = n.content }
-        c.xpath_node("comments").try { |n| item.comments = n.content }
-        c.xpath_node("guid").try { |n| item.guid = n.content }
+        c.xpath_node("comments").try do |n|
+          begin
+            item.comments = URI.parse n.content
+          rescue
+          end
+        end
+        c.xpath_node("enclosure").try { |n| item.enclosure = Enclosure.from_node n }
+        c.xpath_node("guid").try { |n| item.guid = GUID.from_node n }
         c.xpath_node("author").try { |n| item.author = n.content }
-        c.xpath_node("category").try { |n| item.category = n.content }
+        c.xpath_node("category").try { |n| item.category = Category.from_node n }
       end
     end
 
-    result
+    result.check
   end
 end
