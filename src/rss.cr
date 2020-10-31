@@ -46,7 +46,7 @@ module RSS
       "version: #{@version}"
     end
 
-    # Make sure that the RSS Feed is up to specification
+    # Check required fields
     def check
       raise ParserException.new("Invalid Version") if @version.empty?
       raise ParserException.new("Missing required title field") if @title.empty?
@@ -82,16 +82,15 @@ module RSS
     feed.xpath_node("/rss/channel/pubDate").try { |n| result.pubDate = Time::Format::HTTP_DATE.parse n.content }
     feed.xpath_node("/rss/channel/lastBuildDate").try { |n| result.lastBuildDate = Time::Format::HTTP_DATE.parse n.content }
     result.categories = feed.xpath_nodes("/rss/channel/category").map { |n| Category.from_node n }
-    feed.xpath_node("/rss/channel/generator").try { |n| result.generator = n.content }
+    feed.xpath_node("/rss/channel/generator").try { |n| result.generator = URI.decode n.content }
     feed.xpath_node("/rss/channel/docs").try { |n| result.docs = tryURI n.content }
     feed.xpath_node("/rss/channel/cloud").try { |n| result.cloud = Cloud.from_node n }
     feed.xpath_node("/rss/channel/ttl").try { |n| result.ttl = Time::Span.new(minutes: ((t = n.content.to_i) < 0 ? raise ParserException.new("Invalid ttl field") : t)) }
     feed.xpath_node("/rss/channel/image").try { |n| result.image = Image.from_node n }
     feed.xpath_node("/rss/channel/rating").try { |n| result.rating = n.content }
     feed.xpath_node("/rss/channel/textInput").try { |n| result.textInput = TextInput.from_node n }
-    
     feed.xpath_node("/rss/channel/skipHours").try { |n| result.skipHours = n.xpath_nodes("hour").map { |h| (h = h.content.to_u8) < 24 ? h : raise ParserException.new("Invalid hour #{h}") }.uniq }
-    feed.xpath_node("/rss/channel/skipDays").try { |n| result.skipDays = n.xpath_nodes("day").map { |d| Time.parse(d.content, "%A", Time::Location::UTC).day_of_week }.uniq }
+    feed.xpath_node("/rss/channel/skipDays").try { |n| result.skipDays = n.xpath_nodes("day").map { |d| getDayOfWeek d.content.downcase }.uniq }
 
     if rss.namespaces.has_key? "xmlns:sy"
       feed.xpath_node("/rss/channel/sy:updatePeriod").try { |n| result.updatePeriod = (["hourly", "daily", "weekly", "monthly", "yearly"].includes?(u = n.content.strip.downcase)) ? u : raise ParserException.new("Invalid sy:updatePeriod field") }
@@ -116,13 +115,14 @@ module RSS
       Item.new.tap do |item|
         c.xpath_node("title").try { |n| item.title = URI.decode n.content }
         c.xpath_node("link").try { |n| item.link = URI.parse n.content }
-        c.xpath_node("pubDate").try { |n| item.pubDate = Time::Format::HTTP_DATE.parse n.content }
         c.xpath_node("description").try { |n| item.description = URI.decode n.content }
+        c.xpath_node("author").try { |n| item.author = n.content }
+        item.categories = c.xpath_nodes("category").map { |n| Category.from_node n }
         c.xpath_node("comments").try  { |n| item.comments = URI.parse n.content }
         c.xpath_node("enclosure").try { |n| item.enclosure = Enclosure.from_node n }
         c.xpath_node("guid").try { |n| item.guid = GUID.from_node n }
-        c.xpath_node("author").try { |n| item.author = n.content }
-        item.categories = c.xpath_nodes("category").map { |n| Category.from_node n }
+        c.xpath_node("pubDate").try { |n| item.pubDate = Time::Format::HTTP_DATE.parse n.content }
+        c.xpath_node("source").try { |n| item.source = Source.from_node n }
       end
     end
 
@@ -134,6 +134,25 @@ module RSS
       URI.parse content
     rescue
       nil
+    end
+  end
+
+  private def getDayOfWeek(content)
+    case content
+    when "tuesday"
+      Time::DayOfWeek::Tuesday
+    when "wednesday"
+      Time::DayOfWeek::Wednesday
+    when "thursday"
+      Time::DayOfWeek::Thursday
+    when "friday"
+      Time::DayOfWeek::Friday
+    when "saturday"
+      Time::DayOfWeek::Saturday
+    when "sunday"
+      Time::DayOfWeek::Sunday
+    else
+      Time::DayOfWeek::Monday
     end
   end
 end

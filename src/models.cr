@@ -121,7 +121,7 @@ module RSS
 
     property url : URI
     property title : String
-    property link : String
+    property link : URI
     # Optional elements
     property width : UInt32
     property height : UInt32
@@ -135,14 +135,13 @@ module RSS
     end
 
     def self.from_node(node : XML::Node)
-      url = URI.parse(node.xpath_node("url").not_nil!.content)
+      url = URI.parse node.xpath_node("url").not_nil!.content
       title = node.xpath_node("title").not_nil!.content
-      link = node.xpath_node("link").not_nil!.content
+      link = URI.parse node.xpath_node("link").not_nil!.content
       width = node.xpath_node("width").try { |n| n.content.to_u32 }
       height = node.xpath_node("height").try { |n| n.content.to_u32 }
       desc = node.xpath_node("description").try { |n| n.content }
-      desc = title if desc.nil?
-      Image.new url, URI.decode(title), link, (width.nil? ? 88_u32 : width), (height.nil? ? 31_u32 : height), URI.decode(desc)
+      Image.new url, URI.decode(title), link, (width.nil? ? 88_u32 : width), (height.nil? ? 31_u32 : height), (desc.nil? ? "" : URI.decode(desc))
     end
   end
 
@@ -152,7 +151,7 @@ module RSS
     property title : String
     property description : String
     property name : String
-    property link : String
+    property link : URI
 
     def initialize(@title, @description, @name, @link)
     end
@@ -165,7 +164,7 @@ module RSS
       title = node.xpath_node("title").not_nil!.content
       desc = node.xpath_node("description").not_nil!.content
       name = node.xpath_node("name").not_nil!.content
-      link = node.xpath_node("link").not_nil!.content
+      link = URI.parse node.xpath_node("link").not_nil!.content
       raise ParserException.new("Invalid name field in textInput") if !name.matches?(/[\w\d:._-]*/)
       TextInput.new title, URI.decode(desc), name, link
     end
