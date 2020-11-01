@@ -1,10 +1,13 @@
 name: rss
 version: 0.1.1
 
+crystal: 0.35.1
+
 authors:
   - Rui Vieira <ruidevieira@googlemail.com>
+  - MineBartekSA <bartek_skoczen@protonmail.com>
 
 description: |
-  Minimal RSS parser
+  RSS parser
 
 license: MIT

@@ -2,7 +2,7 @@ require "./spec_helper"
 
 describe RSS do
   it "works on live PV02 feed" do
-    feed = RSS.parse "https://www.pv02comic.com/feed/" # RSS Feed of a nice comic
+    feed = RSS.parse "https://www.pv02comic.com/feed/", 0 # RSS Feed of a nice comic
     feed.to_s.should eq("version: 2.0")
     feed.title.should eq("PV02")
     feed.description.should eq("A robot named Pivot")
@@ -12,6 +12,13 @@ describe RSS do
     feed.ttl.should eq(Time::Span.new minutes: 60)
     feed.image.should eq(RSS::Image.new URI.parse("https://www.pv02comic.com/wp-content/uploads/2017/07/cropped-nui-icon-1-32x32.png"), "PV02", URI.parse("https://www.pv02comic.com"), 32_u32, 32_u32)
     feed.items.size.should be > 0
+  end
+
+  it "follows redirects" do
+    feed = RSS.parse "https://pv02comic.com/feed/"
+    feed.to_s.should eq("version: 2.0")
+    feed.title.should eq("PV02")
+    feed.description.should eq("A robot named Pivot")
   end
 
   it "works on official sample feed" do
@@ -33,7 +40,7 @@ describe RSS do
     feed.items[0].description.should eq("How do Americans get ready to work with Russians aboard the International Space Station? They take a crash course in culture, language and protocol at Russia's <a href=\"http://howe.iki.rssi.ru/GCTC/gctc_e.htm\">Star City</a>.")
     feed.items[0].pubDate.should eq(Time::Format::HTTP_DATE.parse "Tue, 03 Jun 2003 09:39:21 GMT")
     feed.items[0].guid.should eq(RSS::GUID.new "http://liftoff.msfc.nasa.gov/2003/06/03.html#item573")
-    feed.items[1].title.should eq(nil)
+    feed.items[1].title.should be_nil
     feed.items[1].description.should eq("Sky watchers in Europe, Asia, and parts of Alaska and Canada will experience a <a href=\"http://science.nasa.gov/headlines/y2003/30may_solareclipse.htm\">partial eclipse of the Sun</a> on Saturday, May 31st.")
     feed.items[1].pubDate.should eq(Time::Format::HTTP_DATE.parse "Fri, 30 May 2003 11:06:42 GMT")
     feed.items[1].guid.should eq(RSS::GUID.new "http://liftoff.msfc.nasa.gov/2003/05/30.html#item572")
@@ -144,7 +151,7 @@ describe RSS do
     feed.items[0].pubDate.should eq(Time::Format::HTTP_DATE.parse "Sun, 06 Sep 2009 16:20:00 +0000")
     feed.items[0].source.should eq(RSS::Source.new "Example Second Blog", URI.parse("http://www.example.com/blog2/rss"))
     feed.items[1].title.should eq("Minimal Example entry")
-    feed.items[1].description.should eq(nil)
-    feed.items[1].link.should eq(nil)
+    feed.items[1].description.should be_nil
+    feed.items[1].link.should be_nil
   end
 end

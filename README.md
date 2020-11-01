@@ -1,6 +1,6 @@
 # rss
 
-Minimal RSS parser for Crystal
+RSS parser for Crystal
 
 ## Installation
 
@@ -28,9 +28,7 @@ end
 
 Warning:
 
-- Not fully tested
 - Pre-release (API will break)
-- Not fit for production
 
 ## Contributing
 

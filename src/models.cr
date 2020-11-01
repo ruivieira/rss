@@ -136,12 +136,12 @@ module RSS
 
     def self.from_node(node : XML::Node)
       url = URI.parse node.xpath_node("url").not_nil!.content
-      title = node.xpath_node("title").not_nil!.content
+      title = URI.decode node.xpath_node("title").not_nil!.content
       link = URI.parse node.xpath_node("link").not_nil!.content
       width = node.xpath_node("width").try { |n| n.content.to_u32 }
       height = node.xpath_node("height").try { |n| n.content.to_u32 }
-      desc = node.xpath_node("description").try { |n| n.content }
-      Image.new url, URI.decode(title), link, (width.nil? ? 88_u32 : width), (height.nil? ? 31_u32 : height), (desc.nil? ? "" : URI.decode(desc))
+      desc = node.xpath_node("description").try { |n| URI.decode n.content }
+      Image.new url, title, link, (width.nil? ? 88_u32 : width), (height.nil? ? 31_u32 : height), (desc.nil? ? "" : desc)
     end
   end
 

@@ -57,14 +57,12 @@ module RSS
     end
   end
 
-  def parse(url : String)
-    parse(URI.parse url)
+  def parse(url : String, max_redirects = 4)
+    parse URI.parse(url), max_redirects
   end
 
-  def parse(uri : URI) : Feed
-    response = HTTP::Client.get uri
-    raise Exception.new("Non-200 response") if response.status != HTTP::Status::OK # TODO: Better request failed exception
-    feed = XML.parse response.body
+  def parse(uri : URI, max_redirects = 4) : Feed
+    feed = XML.parse getResponse(uri, max_redirects).body
 
     result = Feed.new
 
@@ -77,8 +75,8 @@ module RSS
     feed.xpath_node("/rss/channel/description").try { |n| result.description = URI.decode n.content }
     feed.xpath_node("/rss/channel/language").try { |n| result.language = n.content }
     feed.xpath_node("/rss/channel/copyright").try { |n| result.copyright = URI.decode n.content }
-    feed.xpath_node("/rss/channel/managingEditor").try { |n| result.managingEditor = n.content }
-    feed.xpath_node("/rss/channel/webMaster").try { |n| result.webMaster = n.content }
+    feed.xpath_node("/rss/channel/managingEditor").try { |n| result.managingEditor = URI.decode n.content }
+    feed.xpath_node("/rss/channel/webMaster").try { |n| result.webMaster = URI.decode n.content }
     feed.xpath_node("/rss/channel/pubDate").try { |n| result.pubDate = Time::Format::HTTP_DATE.parse n.content }
     feed.xpath_node("/rss/channel/lastBuildDate").try { |n| result.lastBuildDate = Time::Format::HTTP_DATE.parse n.content }
     result.categories = feed.xpath_nodes("/rss/channel/category").map { |n| Category.from_node n }
@@ -95,7 +93,7 @@ module RSS
     if rss.namespaces.has_key? "xmlns:sy"
       feed.xpath_node("/rss/channel/sy:updatePeriod").try { |n| result.updatePeriod = (["hourly", "daily", "weekly", "monthly", "yearly"].includes?(u = n.content.strip.downcase)) ? u : raise ParserException.new("Invalid sy:updatePeriod field") }
       feed.xpath_node("/rss/channel/sy:updateFrequency").try { |n| result.updateFrequency = (u = n.content.to_u32) == 0 ? raise ParserException.new("Invalid sy:updateFrequency field") : u }
-      feed.xpath_node("/rss/channel/sy:updateBase").try { |n| result.updateBase = Time.parse(n.content, "%Y-%m-%dT%R", Time::Location::UTC) }
+      feed.xpath_node("/rss/channel/sy:updateBase").try { |n| result.updateBase = Time.parse n.content, "%Y-%m-%dT%R", Time::Location::UTC }
       if result.ttl.nil? && (!result.updatePeriod.nil? || !result.updateFrequency.nil?)
         freq = result.updateFrequency || 1
         result.ttl = case result.updatePeriod
@@ -116,7 +114,7 @@ module RSS
         c.xpath_node("title").try { |n| item.title = URI.decode n.content }
         c.xpath_node("link").try { |n| item.link = URI.parse n.content }
         c.xpath_node("description").try { |n| item.description = URI.decode n.content }
-        c.xpath_node("author").try { |n| item.author = n.content }
+        c.xpath_node("author").try { |n| item.author = URI.decode n.content }
         item.categories = c.xpath_nodes("category").map { |n| Category.from_node n }
         c.xpath_node("comments").try  { |n| item.comments = URI.parse n.content }
         c.xpath_node("enclosure").try { |n| item.enclosure = Enclosure.from_node n }
@@ -154,5 +152,13 @@ module RSS
     else
       Time::DayOfWeek::Monday
     end
+  end
+
+  private def getResponse(uri : URI, redirects = 4)
+    raise Exception.new("Too many redirects") if redirects == -1
+    response = HTTP::Client.get uri
+    return getResponse URI.parse(response.headers["Location"]), redirects - 1 if [300, 301, 302, 303, 307, 308].includes?(response.status_code) && response.headers.has_key?("Location")
+    raise Exception.new("Server responded with #{response.status_code} #{response.status}") if !response.success?
+    response
   end
 end
