@@ -8,10 +8,12 @@ module RSS
     include JSON::Serializable
 
     property title : String?
+    @[JSON::Field(converter: RSS::URIConverter)]
     property link : URI?
     property description : String?
     property author : String?
     property categories : Array(Category)?
+    @[JSON::Field(converter: RSS::URIConverter)]
     property comments : URI?
     property enclosure : Enclosure?
     property guid : GUID?
@@ -61,6 +63,7 @@ module RSS
   struct Enclosure
     include JSON::Serializable
 
+    @[JSON::Field(converter: RSS::URIConverter)]
     property url : URI
     property length : UInt64
     property type : String
@@ -81,6 +84,7 @@ module RSS
     include JSON::Serializable
 
     property content : String
+    @[JSON::Field(converter: RSS::URIConverter)]
     property url : URI
 
     def initialize(@content, @url)
@@ -119,8 +123,10 @@ module RSS
   struct Image
     include JSON::Serializable
 
+    @[JSON::Field(converter: RSS::URIConverter)]
     property url : URI
     property title : String
+    @[JSON::Field(converter: RSS::URIConverter)]
     property link : URI
     # Optional elements
     property width : UInt32
@@ -151,6 +157,7 @@ module RSS
     property title : String
     property description : String
     property name : String
+    @[JSON::Field(converter: RSS::URIConverter)]
     property link : URI
 
     def initialize(@title, @description, @name, @link)
@@ -167,6 +174,32 @@ module RSS
       link = URI.parse node.xpath_node("link").not_nil!.content
       raise ParserException.new("Invalid name field in textInput") if !name.matches?(/[\w\d:._-]*/)
       TextInput.new title, URI.decode(desc), name, link
+    end
+  end
+
+  module URIConverter
+    def self.from_json(value : JSON::PullParser) : URI
+      URI.parse value.read_string
+    end
+
+    def self.to_json(value : URI, json : JSON::Builder)
+      json.string value.to_s
+    end
+  end
+
+  module TimeSpanConverter
+    def self.from_json(value : JSON::PullParser) : Time::Span
+      di = (ni = 0) - 1
+      if (tsp = value.read_string.split '.').size == 2
+        tsp[0].includes?(':') ? (ni = -1) : (di = 0)
+      elsif tsp.size == 3
+        (di = (ni = di) + 1)
+      end
+      Time::Span.new days: (di == -1 ? 0 : tsp[di].to_i), hours: (rsp = tsp[(di == 0 ? 1 : 0)].split ':')[0].to_i, minutes: rsp[1].to_i, seconds: rsp[2].to_i, nanoseconds: (ni == 0 ? 0 : tsp[ni].to_i)
+    end
+
+    def self.to_json(value : Time::Span, json : JSON::Builder)
+      json.string value.to_s
     end
   end
 end

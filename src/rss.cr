@@ -10,6 +10,7 @@ module RSS
     # Required Channel Elements
     property version : String
     property title : String
+    @[JSON::Field(converter: RSS::URIConverter)]
     property link : URI
     property description : String
     property items : Array(Item)
@@ -23,8 +24,10 @@ module RSS
     property lastBuildDate : Time?
     property categories : Array(Category)?
     property generator : String?
+    @[JSON::Field(converter: RSS::URIConverter)]
     property docs : URI?
     property cloud : Cloud?
+    @[JSON::Field(converter: RSS::TimeSpanConverter)]
     property ttl : Time::Span?
     property image : Image?
     property rating : String?
@@ -38,8 +41,8 @@ module RSS
     property updateBase : Time?
 
     def initialize(@version = "", @title = "", @link = URI.new, @description = "", @items = Array(Item).new, @language = nil, @copyright = nil,
-      @managingEditor = nil, @webMaster = nil, @pubDate = nil, @lastBuildDate = nil, @categories = nil, @generator = nil, @docs = nil, @cloud = nil,
-      @ttl = nil, @image = nil, @textInput = nil, @skipHours = nil, @skipDays = nil)
+                   @managingEditor = nil, @webMaster = nil, @pubDate = nil, @lastBuildDate = nil, @categories = nil, @generator = nil, @docs = nil, @cloud = nil,
+                   @ttl = nil, @image = nil, @textInput = nil, @skipHours = nil, @skipDays = nil)
     end
 
     def to_s
@@ -97,15 +100,15 @@ module RSS
       if result.ttl.nil? && (!result.updatePeriod.nil? || !result.updateFrequency.nil?)
         freq = result.updateFrequency || 1
         result.ttl = case result.updatePeriod
-        when "daily"
-          Time::Span.new days: freq
-        when "monthly"
-          freq.months.from_now - Time.local.at_beginning_of_minute
-        when "yearly"
-          freq.years.from_now - Time.local.at_beginning_of_minute
-        else
-          Time::Span.new hours: freq
-        end
+                     when "daily"
+                       Time::Span.new days: freq
+                     when "monthly"
+                       freq.months.from_now - Time.local.at_beginning_of_minute
+                     when "yearly"
+                       freq.years.from_now - Time.local.at_beginning_of_minute
+                     else
+                       Time::Span.new hours: freq
+                     end
       end
     end
 
@@ -116,7 +119,7 @@ module RSS
         c.xpath_node("description").try { |n| item.description = URI.decode n.content }
         c.xpath_node("author").try { |n| item.author = URI.decode n.content }
         item.categories = c.xpath_nodes("category").map { |n| Category.from_node n }
-        c.xpath_node("comments").try  { |n| item.comments = URI.parse n.content }
+        c.xpath_node("comments").try { |n| item.comments = URI.parse n.content }
         c.xpath_node("enclosure").try { |n| item.enclosure = Enclosure.from_node n }
         c.xpath_node("guid").try { |n| item.guid = GUID.from_node n }
         c.xpath_node("pubDate").try { |n| item.pubDate = Time::Format::HTTP_DATE.parse n.content }

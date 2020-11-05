@@ -154,4 +154,13 @@ describe RSS do
     feed.items[1].description.should be_nil
     feed.items[1].link.should be_nil
   end
+
+  it "converts to json" do
+    feed = RSS.parse "https://www.pv02comic.com/feed/"
+    feed.to_json.should_not be_nil
+    feed = RSS.parse "http://127.0.0.1:8295"
+    json = feed.to_json
+    json.should_not be_nil
+    RSS::Feed.from_json(json).should_not be_nil
+  end
 end
